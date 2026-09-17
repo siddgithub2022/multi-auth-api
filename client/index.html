@@ -220,20 +220,14 @@ pre{white-space:pre-wrap;word-break:break-all}
       <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-orange-100 text-orange-700 rounded grid place-items-center"><i class="fa-solid fa-plug"></i></span> C2M Testing <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Dynamic BaseUrl</span></h2>
       <p class="text-sm text-gray-500 mt-1">Test all 7 auth types against <b>any host</b> — LAN, localhost, or public tunnel (<code>expose-free.bat</code>). C2M cloud must use public <code>https://xxxx.lhr.life</code>, not <code>192.168...</code>.</p>
 
-      <div class="mt-4 bg-orange-50 border border-orange-200 rounded p-3">
-        <label class="text-xs font-bold">Dynamic Base URL (single for all C2M tests)</label>
+      <div class="mt-4 bg-green-50 border border-green-200 rounded p-3">
+        <label class="text-xs font-bold">Base URL for C2M (single, permanent - Vercel)</label>
         <div class="flex gap-2 mt-1">
-          <input id="c2mBaseUrl" class="flex-1 border rounded px-3 py-2 text-sm code" placeholder="https://xxxx.lhr.life  or  http://192.168.0.45:3000  or  http://localhost:3000" value="http://192.168.0.45:3000">
-          <button onclick="c2mUseCurrent()" class="bg-gray-800 text-white px-3 rounded text-xs">Use Current</button>
-          <button onclick="c2mSaveBaseUrl()" class="bg-indigo-600 text-white px-3 rounded text-xs">Save</button>
+          <input id="c2mBaseUrl" class="flex-1 border rounded px-3 py-2 text-sm code bg-white" value="https://multi-auth-api.vercel.app" readonly>
+          <button onclick="navigator.clipboard.writeText(c2mGetBase()); alert('Copied '+c2mGetBase())" class="bg-green-600 text-white px-3 rounded text-xs">Copy</button>
+          <button onclick="window.open(c2mGetBase()+'/health','_blank')" class="bg-gray-800 text-white px-3 rounded text-xs">Test</button>
         </div>
-        <div class="mt-2 flex gap-2 text-xs">
-          <button onclick="c2mSetBase('http://localhost:3000')" class="bg-white border px-2 py-1 rounded">localhost:3000</button>
-          <button onclick="c2mSetBase('http://192.168.0.45:3000')" class="bg-white border px-2 py-1 rounded">LAN 192.168.0.45:3000</button>
-          <button onclick="c2mSetBase('https://12d717493869e5.lhr.life')" class="bg-white border px-2 py-1 rounded">Public demo</button>
-          <button onclick="c2mPasteTunnel()" class="bg-amber-100 px-2 py-1 rounded">Paste tunnel URL</button>
-        </div>
-        <p class="text-xs text-gray-500 mt-2">Stored in localStorage. All C2M buttons below use this URL. Keep tunnel window open for public.</p>
+        <p class="text-xs text-gray-500 mt-2">All 7 auth types below use this same Vercel URL. No tunnel window needed. For LAN use <code>http://192.168.0.45:3000</code> in browser, but C2M cloud must use <code>https://multi-auth-api.vercel.app</code>.</p>
       </div>
 
       <div class="mt-4 grid grid-cols-2 gap-2">

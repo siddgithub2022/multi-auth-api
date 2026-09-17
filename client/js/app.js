@@ -314,7 +314,7 @@ function c2mSetBase(url){ const el=document.getElementById('c2mBaseUrl'); if(el)
 function c2mSaveBaseUrl(){ const v=c2mGetBase(); localStorage.setItem('c2mBaseUrl',v); const p=document.getElementById('c2mHostPreview'); if(p) p.textContent=v; out('c2mOut',{saved:v}); }
 function c2mUseCurrent(){ c2mSetBase(base); }
 function c2mPasteTunnel(){ const v=prompt('Paste public tunnel URL (https://xxxx.lhr.life or https://xxxx.trycloudflare.com)'); if(v) c2mSetBase(v.trim().replace(/\/$/,'')); }
-(function(){ const saved=localStorage.getItem('c2mBaseUrl'); if(saved){ const el=document.getElementById('c2mBaseUrl'); if(el) el.value=saved; const p=document.getElementById('c2mHostPreview'); if(p) p.textContent=saved; } const el=document.getElementById('c2mBaseUrl'); if(el) el.addEventListener('input',()=>{ const p=document.getElementById('c2mHostPreview'); if(p) p.textContent=el.value; }); })();
+(function(){ const vercel='https://multi-auth-api.vercel.app'; const el=document.getElementById('c2mBaseUrl'); const p=document.getElementById('c2mHostPreview'); if(el) el.value=vercel; if(p) p.textContent=vercel; localStorage.setItem('c2mBaseUrl',vercel); })();
 async function c2mTest(type){
   const b=c2mGetBase();
   const outEl='c2mOut';
