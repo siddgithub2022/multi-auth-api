@@ -1,0 +1,14 @@
+{
+  "check": "ok",
+  "service": "Multi-Auth Realtime API",
+  "version": "1.0.0",
+  "timestamp": "2026-09-17T00:00:00.000Z",
+  "endpoints": {
+    "health": "/health",
+    "config": "/api/config",
+    "public": "/api/public/info",
+    "check": "/check.html"
+  },
+  "auth": ["none", "basic", "digest", "oauth", "oauth1.0", "oauth1.0a", "oauth2.0"],
+  "baseUrl": "http://localhost:3000"
+}
