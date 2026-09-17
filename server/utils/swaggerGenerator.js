@@ -113,27 +113,34 @@ function addPaths(spec){
 }
 
 function generateAll(outputDir){
-  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, {recursive:true});
   const full = addPaths(baseSpec());
-  fs.writeFileSync(path.join(outputDir,'swagger.json'), JSON.stringify(full,null,2));
-  const tagsMap = {
-    'noauth': ['Public (No Auth)'],
-    'basic': ['Basic Auth'],
-    'digest': ['Digest Auth'],
-    'oauth1': ['OAuth 1.0'],
-    'oauth1a': ['OAuth 1.0a'],
-    'oauth2': ['OAuth 2.0'],
-    'realtime': ['Realtime']
-  };
-  for (const [key, tags] of Object.entries(tagsMap)){
-    const clone = JSON.parse(JSON.stringify(full));
-    clone.info.title = `Multi-Auth API - ${key}`;
-    clone.paths = Object.fromEntries(Object.entries(full.paths).filter(([_,v])=>{
-      const method = Object.values(v)[0];
-      return method.tags && method.tags.some(t=> tags.includes(t));
-    }));
-    clone.tags = full.tags.filter(t=> tags.includes(t.name));
-    fs.writeFileSync(path.join(outputDir,`swagger.${key}.json`), JSON.stringify(clone,null,2));
+  // Try to write to disk, but gracefully handle read-only (Vercel /var/task)
+  try {
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, {recursive:true});
+    fs.writeFileSync(path.join(outputDir,'swagger.json'), JSON.stringify(full,null,2));
+    const tagsMap = {
+      'noauth': ['Public (No Auth)'],
+      'basic': ['Basic Auth'],
+      'digest': ['Digest Auth'],
+      'oauth1': ['OAuth 1.0'],
+      'oauth1a': ['OAuth 1.0a'],
+      'oauth2': ['OAuth 2.0'],
+      'realtime': ['Realtime']
+    };
+    for (const [key, tags] of Object.entries(tagsMap)){
+      const clone = JSON.parse(JSON.stringify(full));
+      clone.info.title = `Multi-Auth API - ${key}`;
+      clone.paths = Object.fromEntries(Object.entries(full.paths).filter(([_,v])=>{
+        const method = Object.values(v)[0];
+        return method.tags && method.tags.some(t=> tags.includes(t));
+      }));
+      clone.tags = full.tags.filter(t=> tags.includes(t.name));
+      fs.writeFileSync(path.join(outputDir,`swagger.${key}.json`), JSON.stringify(clone,null,2));
+    }
+  } catch(e) {
+    // On Vercel read-only file system, just return in-memory (no file write)
+    if(e.code !== 'EROFS' && !String(e.message).includes('read-only')) throw e;
+    // Silently ignore, return full spec
   }
   return full;
 }
