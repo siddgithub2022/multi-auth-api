@@ -155,14 +155,14 @@ app.get('*', (req, res) => {
   res.json({ message: 'Multi-Auth Realtime API', docs: '/docs', swagger: '/swagger.json', postman: '/postman.json', health: '/health' });
 });
 
-// Create HTTP server
+// Create HTTP server - Vercel serverless: don't listen, just export app
 const server = http.createServer(app);
-setupRealtime(server);
-startRealtime(2000);
-
-const HOST = process.env.HOST || '0.0.0.0';
-server.listen(PORT, HOST, () => {
-  console.log(`
+if (!process.env.VERCEL) {
+  setupRealtime(server);
+  startRealtime(2000);
+  const HOST = process.env.HOST || '0.0.0.0';
+  server.listen(PORT, HOST, () => {
+    console.log(`
   ==========================================
    Multi-Auth Realtime Dedicated Server
   ==========================================
@@ -191,7 +191,14 @@ server.listen(PORT, HOST, () => {
     • Socket.IO -> /socket.io/
    One-click: double-click start-all.bat / start-all.sh / launcher.ps1
   ==========================================
-  `);
-});
+    `);
+  });
+} else {
+  // On Vercel, keep realtime data generation for SSE polling (no WS)
+  startRealtime(2000);
+  try { setupSSE(app, oauth2Middleware, basicAuthMiddleware, digestAuthMiddleware); } catch {}
+}
 
-module.exports = { app, server };
+module.exports = app;
+module.exports.app = app;
+module.exports.server = server;
