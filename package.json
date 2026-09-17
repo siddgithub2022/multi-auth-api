@@ -1,0 +1,23 @@
+{
+  "name": "multi-auth-realtime-api",
+  "version": "1.0.0",
+  "description": "API demonstrating Non-Auth, Basic, Digest, OAuth 1.0, OAuth 1.0a, OAuth 2.0 with realtime data and tabbed UI",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "start:server": "node server/server.js",
+    "start:client": "npx http-server client -p 8080 --cors -c-1",
+    "start:client:open": "npx http-server client -p 8080 --cors -c-1 -o",
+    "start:all": "node launcher.js both",
+    "start:all:dev": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install",
+    "docker:build": "docker build -t multi-auth-api .",
+    "docker:run": "docker-compose up",
+    "launcher": "powershell -ExecutionPolicy Bypass -File launcher.ps1",
+    "launcher:gui": "node launcher.js both"
+  },
+  "keywords": ["auth", "oauth", "basic", "digest", "realtime", "websocket", "sse"],
+  "author": "Muse Spark",
+  "license": "MIT"
+}

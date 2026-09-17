@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Runner • Multi-Auth Realtime API</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .scroll { scrollbar-width: thin; }
+  .status-2xx{ background:#16a34a; } .status-4xx{ background:#ea580c; } .status-5xx{ background:#dc2626; } .status-0{ background:#6b7280; }
+</style>
+</head>
+<body class="bg-[#f8fafc] min-h-screen">
+<header class="bg-gray-900 text-white sticky top-0 z-50">
+  <div class="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <a href="/" class="w-9 h-9 bg-indigo-600 rounded-lg grid place-items-center"><i class="fa-solid fa-bolt"></i></a>
+      <div>
+        <h1 class="font-bold leading-none">API Runner</h1>
+        <p class="text-xs text-gray-400">Run any request • See live response • All 7 auth types</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/dashboard.html" class="text-xs bg-emerald-600 px-3 py-1.5 rounded font-bold"><i class="fa-solid fa-chart-line mr-1"></i>Dashboard</a>
+      <a href="/" class="text-xs bg-white text-gray-900 px-3 py-1.5 rounded font-semibold"><i class="fa-solid fa-table-columns mr-1"></i> Tabs UI</a>
+      <a href="/layman" target="_blank" class="text-xs bg-gray-800 px-3 py-1.5 rounded">Layman Guide</a>
+      <a href="/docs" target="_blank" class="text-xs bg-indigo-600 px-3 py-1.5 rounded">Swagger</a>
+      <span id="serverDot" class="text-xs bg-gray-800 px-3 py-1.5 rounded-full flex items-center gap-2"><span class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></span><span id="serverTxt">checking</span></span>
+    </div>
+  </div>
+</header>
+
+<!-- Preset bar -->
+<div class="bg-white border-b sticky top-[57px] z-40">
+  <div class="max-w-[1400px] mx-auto px-4 py-2 flex gap-2 items-center overflow-x-auto">
+    <span class="text-xs font-bold text-gray-500 whitespace-nowrap">QUICK PRESETS:</span>
+    <select id="presetSelect" class="text-xs border rounded px-2 py-1.5 bg-gray-50 min-w-[340px]">
+      <option value="">-- Choose an endpoint preset --</option>
+      <optgroup label="Public (No Auth)">
+        <option value="GET|/api/public/info">GET /api/public/info</option>
+        <option value="GET|/api/public/data">GET /api/public/data</option>
+        <option value="POST|/api/public/echo">POST /api/public/echo</option>
+        <option value="GET|/api/public/health">GET /api/public/health</option>
+        <option value="GET|/api/health">GET /health</option>
+      </optgroup>
+      <optgroup label="Basic Auth">
+        <option value="GET|/api/basic/data">GET /api/basic/data (Basic)</option>
+        <option value="GET|/api/basic/profile">GET /api/basic/profile (Basic)</option>
+        <option value="GET|/api/basic/credentials">GET /api/basic/credentials</option>
+      </optgroup>
+      <optgroup label="Digest Auth">
+        <option value="GET|/api/digest/data">GET /api/digest/data (Digest)</option>
+        <option value="GET|/api/digest/credentials">GET /api/digest/credentials</option>
+      </optgroup>
+      <optgroup label="OAuth 1.0">
+        <option value="GET|/api/oauth1/data">GET /api/oauth1/data (HMAC-SHA1)</option>
+        <option value="GET|/api/oauth1/credentials">GET /api/oauth1/credentials</option>
+      </optgroup>
+      <optgroup label="OAuth 1.0a">
+        <option value="POST|/api/oauth1a/request_token">POST /api/oauth1a/request_token</option>
+        <option value="GET|/api/oauth1a/request_token">GET /api/oauth1a/request_token</option>
+        <option value="GET|/api/oauth1a/authorize">GET /api/oauth1a/authorize?oauth_token=...</option>
+        <option value="POST|/api/oauth1a/access_token">POST /api/oauth1a/access_token</option>
+        <option value="GET|/api/oauth1a/data">GET /api/oauth1a/data</option>
+      </optgroup>
+      <optgroup label="OAuth 2.0">
+        <option value="GET|/api/oauth2/authorize">GET /api/oauth2/authorize?response_type=code&client_id=...&user=john</option>
+        <option value="POST|/api/oauth2/token">POST /api/oauth2/token (all grants)</option>
+        <option value="GET|/api/oauth2/data">GET /api/oauth2/data (Bearer)</option>
+        <option value="POST|/api/oauth2/introspect">POST /api/oauth2/introspect</option>
+      </optgroup>
+      <optgroup label="Realtime">
+        <option value="GET|/api/realtime/sse">GET /api/realtime/sse (SSE stream)</option>
+      </optgroup>
+    </select>
+    <button id="fillPreset" class="text-xs bg-gray-900 text-white px-3 py-1.5 rounded whitespace-nowrap">Load Preset</button>
+    <div class="h-6 w-px bg-gray-200"></div>
+    <button onclick="clearRunner()" class="text-xs bg-gray-100 px-3 py-1.5 rounded">Clear</button>
+    <button onclick="saveHistory(true)" class="text-xs bg-amber-100 text-amber-800 px-3 py-1.5 rounded">Save</button>
+  </div>
+</div>
+
+<main class="max-w-[1400px] mx-auto px-4 py-4 grid grid-cols-12 gap-4">
+  <!-- LEFT: Request builder -->
+  <div class="col-span-12 lg:col-span-5 space-y-4">
+    <!-- URL bar -->
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="flex gap-2">
+        <select id="method" class="border rounded px-3 py-2.5 text-sm font-bold bg-gray-50">
+          <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+        </select>
+        <input id="url" value="/api/public/info" class="flex-1 border rounded px-3 py-2.5 text-sm code" placeholder="/api/public/info or http://...">
+        <button id="sendBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-paper-plane"></i> Send</button>
+      </div>
+      <div class="mt-2 flex gap-2 text-xs">
+        <span class="text-gray-400">Base: <code id="baseUrl" class="bg-gray-100 px-1 rounded"></code></span>
+        <span class="text-gray-400">• Time: <span id="timeInfo">-</span></span>
+      </div>
+      <div id="curlPreview" class="mt-2 bg-gray-900 text-green-300 p-2 rounded text-[11px] code overflow-auto max-h-20 hidden"></div>
+      <button onclick="toggleCurl()" class="text-xs text-indigo-600 mt-1">Show cURL</button>
+    </div>
+
+    <!-- Tabs for builder -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+      <div class="flex border-b text-xs">
+        <button data-btab="auth" class="btab bg-gray-900 text-white px-4 py-2 font-semibold">Auth</button>
+        <button data-btab="headers" class="btab bg-gray-100 px-4 py-2">Headers</button>
+        <button data-btab="params" class="btab bg-gray-100 px-4 py-2">Query Params</button>
+        <button data-btab="body" class="btab bg-gray-100 px-4 py-2">Body</button>
+      </div>
+
+      <!-- Auth panel -->
+      <div data-bpanel="auth" class="p-4 space-y-3">
+        <select id="authType" class="w-full border rounded px-3 py-2 text-sm">
+          <option value="none">No Auth (public)</option>
+          <option value="basic">Basic Auth</option>
+          <option value="digest">Digest Auth (auto handshake)</option>
+          <option value="bearer">Bearer Token (OAuth 2.0)</option>
+          <option value="oauth1">OAuth 1.0 HMAC-SHA1</option>
+          <option value="oauth1a">OAuth 1.0a Token</option>
+        </select>
+
+        <div id="authBasic" class="space-y-2 hidden">
+          <div class="grid grid-cols-2 gap-2">
+            <input id="basicUser" value="admin" placeholder="Username" class="border rounded px-3 py-2 text-sm">
+            <input id="basicPass" value="admin123" placeholder="Password" class="border rounded px-3 py-2 text-sm">
+          </div>
+          <p class="text-xs text-gray-400">Try: admin/admin123, user1/password123, demo/demo123</p>
+        </div>
+
+        <div id="authDigest" class="space-y-2 hidden">
+          <div class="grid grid-cols-2 gap-2">
+            <input id="digestUser" value="admin" placeholder="Username" class="border rounded px-3 py-2 text-sm">
+            <input id="digestPass" value="admin123" placeholder="Password" class="border rounded px-3 py-2 text-sm">
+          </div>
+          <p class="text-xs bg-purple-50 p-2 rounded">Will auto-do 401 challenge → compute MD5 → retry. Like browser.</p>
+        </div>
+
+        <div id="authBearer" class="space-y-2 hidden">
+          <input id="bearerToken" placeholder="Paste Bearer token (JWT)" class="w-full border rounded px-3 py-2 text-sm code">
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="fetchToken('password')" class="bg-indigo-600 text-white py-1.5 rounded text-xs">Get via Password (john)</button>
+            <button onclick="fetchToken('client_credentials')" class="bg-gray-900 text-white py-1.5 rounded text-xs">Client Creds</button>
+            <button onclick="fetchToken('auth_code')" class="bg-green-600 text-white py-1.5 rounded text-xs">Auth Code</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="o2User" value="john" class="border rounded px-2 py-1 text-xs" placeholder="user">
+            <input id="o2Pass" value="john123" class="border rounded px-2 py-1 text-xs" placeholder="pass">
+          </div>
+        </div>
+
+        <div id="authOAuth1" class="space-y-2 hidden">
+          <div class="grid grid-cols-2 gap-2">
+            <input id="o1Key" value="oauth1_consumer_key" class="border rounded px-2 py-1 text-xs" placeholder="consumer key">
+            <input id="o1Secret" value="oauth1_consumer_secret_123" class="border rounded px-2 py-1 text-xs" placeholder="consumer secret">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input id="o1Token" value="oauth1_token_abc" class="border rounded px-2 py-1 text-xs" placeholder="token">
+            <input id="o1TokenSecret" value="oauth1_token_secret_xyz" class="border rounded px-2 py-1 text-xs" placeholder="token secret">
+          </div>
+          <p class="text-xs text-gray-400">Will auto-sign with HMAC-SHA1.</p>
+        </div>
+
+        <div id="authOAuth1a" class="space-y-2 hidden">
+          <input id="o1aToken" placeholder="oauth_token (access token)" class="w-full border rounded px-2 py-1 text-xs" >
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="o1aStep('request')" class="bg-gray-900 text-white py-1 rounded text-xs">1. Request Token</button>
+            <button onclick="o1aStep('authorize')" class="bg-indigo-600 text-white py-1 rounded text-xs">2. Authorize</button>
+            <button onclick="o1aStep('access')" class="bg-green-600 text-white py-1 rounded text-xs">3. Access Token</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Headers -->
+      <div data-bpanel="headers" class="p-4 hidden">
+        <div id="headersList" class="space-y-2"></div>
+        <button onclick="addHeader()" class="mt-2 text-xs bg-gray-100 px-3 py-1 rounded"><i class="fa-solid fa-plus mr-1"></i>Add Header</button>
+        <p class="text-xs text-gray-400 mt-2">Auth header auto-added from Auth tab. Add custom like <code>X-Custom: value</code></p>
+      </div>
+
+      <!-- Query Params -->
+      <div data-bpanel="params" class="p-4 hidden">
+        <div id="paramsList" class="space-y-2"></div>
+        <button onclick="addParam()" class="mt-2 text-xs bg-gray-100 px-3 py-1 rounded"><i class="fa-solid fa-plus mr-1"></i>Add Param</button>
+      </div>
+
+      <!-- Body -->
+      <div data-bpanel="body" class="p-4 hidden">
+        <select id="bodyType" class="border rounded px-2 py-1 text-xs mb-2">
+          <option value="none">No Body</option>
+          <option value="json">JSON (application/json)</option>
+          <option value="form">x-www-form-urlencoded</option>
+          <option value="raw">Raw</option>
+        </select>
+        <textarea id="bodyContent" placeholder='{"hello":"world"}' class="w-full h-40 border rounded p-3 text-sm code"></textarea>
+        <div class="flex gap-2 mt-2">
+          <button onclick="formatJson()" class="text-xs bg-gray-100 px-3 py-1 rounded">Pretty JSON</button>
+          <button onclick="document.getElementById('bodyContent').value=''" class="text-xs bg-red-50 text-red-600 px-3 py-1 rounded">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm">History</h3>
+        <button onclick="clearHistory()" class="text-xs text-red-600">Clear</button>
+      </div>
+      <div id="historyList" class="mt-2 space-y-1 max-h-40 overflow-auto text-xs"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Response -->
+  <div class="col-span-12 bg-indigo-600 text-white rounded-xl p-3 flex items-center justify-between text-xs">
+    <span class="font-bold"><i class="fa-solid fa-link mr-1"></i> Single BaseUrl for ALL: <code class="bg-white text-indigo-700 px-2 py-1 rounded" id="runnerUnifiedBaseUrl">http://localhost:3000</code> → 7 auth types share same host</span>
+    <span class="bg-white/20 px-2 py-1 rounded">Change via .env BASE_URL</span>
+  </div>
+  <div class="col-span-12 lg:col-span-7 space-y-4">
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+      <div class="bg-gray-900 text-white px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="font-bold text-sm">Response</span>
+          <span id="statusBadge" class="status-0 text-white text-xs px-2 py-1 rounded font-bold">No request yet</span>
+          <span id="timeBadge" class="text-xs bg-gray-800 px-2 py-1 rounded">-</span>
+          <span id="sizeBadge" class="text-xs bg-gray-800 px-2 py-1 rounded">-</span>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="copyResponse()" class="text-xs bg-gray-800 px-3 py-1 rounded"><i class="fa-solid fa-copy"></i> Copy</button>
+          <button onclick="downloadResponse()" class="text-xs bg-indigo-600 px-3 py-1 rounded">Download</button>
+        </div>
+      </div>
+
+      <!-- Response tabs -->
+      <div class="flex border-b text-xs">
+        <button data-rtab="body" class="rtab bg-gray-900 text-white px-4 py-2 font-semibold">Body</button>
+        <button data-rtab="headers" class="rtab bg-gray-100 px-4 py-2">Headers</button>
+        <button data-rtab="raw" class="rtab bg-gray-100 px-4 py-2">Raw</button>
+      </div>
+
+      <div data-rpanel="body" class="p-0">
+        <div class="flex items-center gap-2 px-4 py-2 border-b bg-gray-50 text-xs">
+          <button onclick="viewMode('pretty')" id="btnPretty" class="bg-gray-900 text-white px-3 py-1 rounded">Pretty</button>
+          <button onclick="viewMode('raw')" id="btnRaw" class="bg-white border px-3 py-1 rounded">Raw</button>
+          <input id="searchResp" placeholder="Filter JSON..." class="ml-auto border rounded px-2 py-1 text-xs w-40" oninput="filterJson()">
+        </div>
+        <pre id="respBody" class="p-4 text-sm code overflow-auto max-h-[520px] bg-white">Hit Send to see response here. Try a preset like GET /api/public/info then Send.</pre>
+      </div>
+      <div data-rpanel="headers" class="p-4 hidden">
+        <pre id="respHeaders" class="text-xs code bg-gray-50 p-3 rounded overflow-auto max-h-[520px]">No headers yet</pre>
+      </div>
+      <div data-rpanel="raw" class="p-4 hidden">
+        <pre id="respRaw" class="text-xs code bg-gray-900 text-green-300 p-3 rounded overflow-auto max-h-[520px]">-</pre>
+      </div>
+    </div>
+
+    <!-- Live log -->
+    <div class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-bold text-sm flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Request Log</h3>
+      <pre id="reqLog" class="mt-2 bg-gray-900 text-gray-300 p-3 rounded text-xs code max-h-40 overflow-auto">No requests yet</pre>
+    </div>
+  </div>
+</main>
+
+<script src="js/runner.js"></script>
+</body>
+</html>

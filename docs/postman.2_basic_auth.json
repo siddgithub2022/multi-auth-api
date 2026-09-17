@@ -1,0 +1,111 @@
+{
+  "info": {
+    "name": "2 - Basic Auth",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "2 - Basic Auth",
+      "item": [
+        {
+          "name": "GET credentials",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/basic/credentials"
+          }
+        },
+        {
+          "name": "GET basic data (admin)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/basic/data"
+          }
+        },
+        {
+          "name": "GET basic profile",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/basic/profile"
+          }
+        },
+        {
+          "name": "GET basic realtime",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/basic/realtime"
+          }
+        },
+        {
+          "name": "GET SSE basic",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/realtime/sse/basic"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}

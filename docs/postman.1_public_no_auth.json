@@ -1,0 +1,69 @@
+{
+  "info": {
+    "name": "1 - Public (No Auth)",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1 - Public (No Auth)",
+      "item": [
+        {
+          "name": "GET public info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/public/info"
+          }
+        },
+        {
+          "name": "GET public data",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/public/data"
+          }
+        },
+        {
+          "name": "POST public echo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hello\":\"world\"}"
+            },
+            "url": "{{baseUrl}}/api/public/echo"
+          }
+        },
+        {
+          "name": "GET health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/public/health"
+          }
+        },
+        {
+          "name": "GET SSE public",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/realtime/sse"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}

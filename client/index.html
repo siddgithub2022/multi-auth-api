@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Auth Realtime API • Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+.tab-active{ background:#111827; color:white; }
+.realtime-dot{ animation:pulse 1s infinite }
+@keyframes pulse{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+pre{white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<!-- Header -->
+<header class="bg-gray-900 text-white sticky top-0 z-50 shadow">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-indigo-600 rounded-lg grid place-items-center"><i class="fa-solid fa-shield-halved"></i></div>
+      <div>
+        <h1 class="font-bold leading-none">Multi-Auth Realtime API</h1>
+        <p class="text-xs text-gray-400">Dedicated Server • 7 Auth Tabs • WS/SSE/Socket.IO</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="serverStatus" class="text-xs bg-gray-800 px-3 py-1 rounded-full flex items-center gap-2"><span class="w-2 h-2 bg-gray-400 rounded-full realtime-dot"></span> checking...</span>
+      <a href="/dashboard.html" class="text-xs bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded font-bold"><i class="fa-solid fa-chart-line mr-1"></i>Dashboard</a>
+      <a href="/layman" target="_blank" class="text-xs bg-white text-gray-900 hover:bg-gray-100 px-3 py-1.5 rounded font-semibold">Layman Guide</a>
+      <a href="/docs" target="_blank" class="text-xs bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded">Swagger UI</a>
+      <a href="/swagger.json" target="_blank" class="text-xs bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded">Swagger JSON</a>
+      <a href="/postman.json" target="_blank" class="text-xs bg-orange-600 hover:bg-orange-700 px-3 py-1.5 rounded">Postman</a>
+    </div>
+  </div>
+</header>
+
+<!-- Tab bar -->
+<nav class="bg-white border-b sticky top-[57px] z-40">
+  <div class="max-w-7xl mx-auto px-2 flex gap-1 overflow-x-auto py-2">
+    <button data-tab="public" class="tab-btn tab-active px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-globe mr-1"></i> Non-Auth</button>
+    <button data-tab="basic" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-key mr-1"></i> Basic</button>
+    <button data-tab="digest" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-fingerprint mr-1"></i> Digest</button>
+    <button data-tab="oauth" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-shield mr-1"></i> OAuth</button>
+    <button data-tab="oauth1" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-1 mr-1"></i> OAuth 1.0</button>
+    <button data-tab="oauth1a" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-code-branch mr-1"></i> OAuth 1.0a</button>
+    <button data-tab="oauth2" class="tab-btn bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-2 mr-1"></i> OAuth 2.0</button>
+    <button data-tab="realtime" class="tab-btn bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-4 py-2 rounded-full text-sm whitespace-nowrap"><i class="fa-solid fa-bolt mr-1"></i> Realtime</button>
+    <button data-tab="c2m" class="tab-btn bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-full text-sm whitespace-nowrap font-bold"><i class="fa-solid fa-plug mr-1"></i> C2M Testing</button>
+    <a href="/runner.html" class="tab-btn bg-white border-2 border-indigo-600 text-indigo-700 hover:bg-indigo-50 px-4 py-2 rounded-full text-sm whitespace-nowrap font-bold"><i class="fa-solid fa-vial mr-1"></i> API Runner</a>
+  </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
+  <div class="col-span-12 bg-indigo-600 text-white rounded-xl p-3 flex items-center justify-between text-xs">
+    <span class="font-bold"><i class="fa-solid fa-link mr-1"></i> Single BaseUrl for all 7 auth types: <code class="bg-white text-indigo-700 px-2 py-1 rounded" id="unifiedBaseUrl">http://localhost:3000</code></span>
+    <span class="bg-white/20 px-2 py-1 rounded">Non-Auth • Basic • Digest • OAuth • OAuth1.0 • OAuth1.0a • OAuth2.0 → same host</span>
+  </div>
+  <!-- Left: Tab contents -->
+  <div class="col-span-12 lg:col-span-8 space-y-6">
+    <!-- PUBLIC -->
+    <section data-panel="public" class="tab-panel bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-green-100 text-green-700 rounded grid place-items-center"><i class="fa-solid fa-globe"></i></span> Non-Auth (Public)</h2>
+      <p class="text-sm text-gray-500 mt-1">No credentials needed. Open endpoints.</p>
+      <div class="mt-4 grid grid-cols-2 gap-3">
+        <button onclick="callPublic('info')" class="bg-gray-900 text-white py-2 rounded">GET /api/public/info</button>
+        <button onclick="callPublic('data')" class="bg-green-600 text-white py-2 rounded">GET /api/public/data</button>
+        <button onclick="callPublic('health')" class="bg-gray-100 py-2 rounded">GET /api/public/health</button>
+        <button onclick="sseConnect('public')" class="bg-emerald-600 text-white py-2 rounded">SSE Public Stream</button>
+      </div>
+      <div class="mt-3">
+        <label class="text-xs">POST /api/public/echo payload</label>
+        <div class="flex gap-2 mt-1">
+          <input id="publicEcho" value='{"hello":"world"}' class="flex-1 border rounded px-3 py-2 text-sm">
+          <button onclick="callPublicEcho()" class="bg-indigo-600 text-white px-4 rounded">Send</button>
+        </div>
+      </div>
+      <pre id="publicOut" class="mt-4 bg-gray-900 text-green-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- BASIC -->
+    <section data-panel="basic" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-amber-100 text-amber-700 rounded grid place-items-center"><i class="fa-solid fa-key"></i></span> Basic Auth</h2>
+      <p class="text-sm text-gray-500">Header: Authorization: Basic base64(username:password)</p>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <input id="basicUser" value="admin" placeholder="username" class="border rounded px-3 py-2 text-sm">
+        <input id="basicPass" value="admin123" placeholder="password" class="border rounded px-3 py-2 text-sm">
+      </div>
+      <p class="text-xs text-gray-400 mt-1">Try: admin/admin123, user1/password123, demo/demo123</p>
+      <div class="mt-3 grid grid-cols-3 gap-2">
+        <button onclick="callBasic('credentials')" class="bg-gray-100 py-2 rounded text-sm">Credentials</button>
+        <button onclick="callBasic('data')" class="bg-amber-600 text-white py-2 rounded text-sm">GET data</button>
+        <button onclick="callBasic('profile')" class="bg-gray-900 text-white py-2 rounded text-sm">Profile</button>
+      </div>
+      <button onclick="callBasic('realtime')" class="mt-2 w-full bg-amber-100 text-amber-800 py-2 rounded">Get realtime (Basic)</button>
+      <pre id="basicOut" class="mt-4 bg-gray-900 text-amber-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- DIGEST -->
+    <section data-panel="digest" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-purple-100 text-purple-700 rounded grid place-items-center"><i class="fa-solid fa-fingerprint"></i></span> Digest Auth</h2>
+      <p class="text-sm text-gray-500">RFC7616 MD5 challenge/response. Browser handles handshake; or use curl --digest.</p>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <input id="digestUser" value="admin" class="border rounded px-3 py-2 text-sm">
+        <input id="digestPass" value="admin123" class="border rounded px-3 py-2 text-sm">
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button onclick="callDigest('credentials')" class="bg-gray-100 py-2 rounded">Credentials</button>
+        <button onclick="callDigest('data')" class="bg-purple-600 text-white py-2 rounded">GET /api/digest/data (Digest)</button>
+      </div>
+      <p class="text-xs mt-2 bg-purple-50 p-2 rounded">Tip: Click will do two requests: first gets 401+nonce, second computes MD5 response via JS and retries. Also try <code>curl --digest -u admin:admin123 http://localhost:3000/api/digest/data</code></p>
+      <pre id="digestOut" class="mt-4 bg-gray-900 text-purple-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- OAUTH generic -->
+    <section data-panel="oauth" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg">OAuth (Generic)</h2>
+      <p class="text-sm text-gray-500">Unified wrapper. Use OAuth2 Bearer for this tab.</p>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button onclick="callGenericOAuth()" class="bg-gray-900 text-white py-2 rounded">GET /api/oauth/info</button>
+        <button onclick="document.querySelector('[data-tab=oauth2]').click()" class="bg-indigo-600 text-white py-2 rounded">Go to OAuth2</button>
+      </div>
+      <pre id="oauthOut" class="mt-4 bg-gray-900 text-blue-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- OAUTH1 -->
+    <section data-panel="oauth1" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg">OAuth 1.0 (2-legged HMAC-SHA1)</h2>
+      <p class="text-sm text-gray-500">Consumer signs every request. No user callback.</p>
+      <div class="mt-3 bg-amber-50 p-3 rounded text-xs">
+        Consumer: <b>oauth1_consumer_key</b> / secret: <b>oauth1_consumer_secret_123</b><br>
+        Token: <b>oauth1_token_abc</b> / secret: <b>oauth1_token_secret_xyz</b>
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <button onclick="callOAuth1('credentials')" class="bg-gray-100 py-2 rounded">Credentials</button>
+        <button onclick="callOAuth1Signed()" class="bg-amber-600 text-white py-2 rounded">GET /api/oauth1/data (Signed)</button>
+      </div>
+      <pre id="oauth1Out" class="mt-4 bg-gray-900 text-amber-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- OAUTH1a -->
+    <section data-panel="oauth1a" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg">OAuth 1.0a (3-legged)</h2>
+      <p class="text-sm text-gray-500">Flow: request_token → authorize → access_token → data</p>
+      <div class="mt-3 grid grid-cols-3 gap-2">
+        <button onclick="oauth1aStep1()" class="bg-gray-900 text-white py-2 rounded text-xs">1. Request Token</button>
+        <button onclick="oauth1aStep2()" class="bg-indigo-600 text-white py-2 rounded text-xs">2. Authorize</button>
+        <button onclick="oauth1aStep3()" class="bg-green-600 text-white py-2 rounded text-xs">3. Access Token</button>
+      </div>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <input id="o1aToken" placeholder="oauth_token" class="border rounded px-2 py-1 text-xs">
+        <input id="o1aVerifier" placeholder="oauth_verifier" class="border rounded px-2 py-1 text-xs">
+      </div>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <input id="o1aAccess" placeholder="access token" class="border rounded px-2 py-1 text-xs">
+        <input id="o1aSecret" placeholder="access secret" class="border rounded px-2 py-1 text-xs">
+      </div>
+      <button onclick="callOAuth1aData()" class="mt-2 w-full bg-purple-600 text-white py-2 rounded">GET /api/oauth1a/data with token</button>
+      <pre id="oauth1aOut" class="mt-4 bg-gray-900 text-cyan-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- OAUTH2 -->
+    <section data-panel="oauth2" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg">OAuth 2.0</h2>
+      <p class="text-sm text-gray-500">Grants: authorization_code, client_credentials, password, refresh_token • Bearer JWT</p>
+      <div class="mt-3 bg-indigo-50 p-3 rounded text-xs">
+        Clients: <b>client_app_123</b> / <b>client_secret_abc_123</b> • Users: john/john123, alice/alice123, bob/bob123
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <input id="o2User" value="john" class="border rounded px-3 py-2 text-sm" placeholder="username">
+        <input id="o2Pass" value="john123" class="border rounded px-3 py-2 text-sm" placeholder="password">
+      </div>
+      <div class="mt-2 grid grid-cols-3 gap-2">
+        <button onclick="oAuth2Password()" class="bg-indigo-600 text-white py-2 rounded text-xs">Password Grant</button>
+        <button onclick="oAuth2ClientCreds()" class="bg-gray-900 text-white py-2 rounded text-xs">Client Creds</button>
+        <button onclick="oAuth2AuthCode()" class="bg-green-600 text-white py-2 rounded text-xs">Auth Code Flow</button>
+      </div>
+      <div class="mt-2">
+        <label class="text-xs">Bearer token</label>
+        <div class="flex gap-2 mt-1">
+          <input id="o2Token" placeholder="Bearer token" class="flex-1 border rounded px-2 py-2 text-xs">
+          <button onclick="oAuth2Introspect()" class="bg-gray-100 px-3 rounded text-xs">Introspect</button>
+          <button onclick="oAuth2Refresh()" class="bg-amber-100 px-3 rounded text-xs">Refresh</button>
+        </div>
+      </div>
+      <div class="mt-2 grid grid-cols-3 gap-2">
+        <button onclick="callOAuth2('data')" class="bg-indigo-600 text-white py-2 rounded text-xs">GET data</button>
+        <button onclick="callOAuth2('profile')" class="bg-gray-900 text-white py-2 rounded text-xs">Profile</button>
+        <button onclick="callOAuth2('realtime')" class="bg-emerald-600 text-white py-2 rounded text-xs">Realtime</button>
+      </div>
+      <pre id="oauth2Out" class="mt-4 bg-gray-900 text-indigo-300 p-3 rounded text-xs max-h-72 overflow-auto">Output...</pre>
+    </section>
+
+    <!-- REALTIME -->
+    <section data-panel="realtime" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-indigo-600 text-white rounded grid place-items-center"><i class="fa-solid fa-bolt"></i></span> Realtime Data</h2>
+      <p class="text-sm text-gray-500">Live metrics via WebSocket, SSE, Socket.IO - authenticated per auth type.</p>
+      <div class="mt-3 grid grid-cols-3 gap-2">
+        <button onclick="wsConnect('public')" class="bg-gray-900 text-white py-2 rounded text-xs">WS Public</button>
+        <button onclick="wsConnect('oauth2')" class="bg-indigo-600 text-white py-2 rounded text-xs">WS Bearer</button>
+        <button onclick="sseConnect('oauth2')" class="bg-emerald-600 text-white py-2 rounded text-xs">SSE Bearer</button>
+      </div>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <button onclick="socketIOConnect()" class="bg-purple-600 text-white py-2 rounded text-xs">Socket.IO</button>
+        <button onclick="stopAllRealtime()" class="bg-red-100 text-red-700 py-2 rounded text-xs">Stop All</button>
+      </div>
+      <div class="mt-3">
+        <label class="text-xs">Subscribe channel</label>
+        <div class="flex gap-2 mt-1">
+          <input id="wsChannel" value="stocks" class="flex-1 border rounded px-2 py-1 text-xs">
+          <button onclick="wsSubscribe()" class="bg-gray-100 px-3 rounded text-xs">Subscribe</button>
+        </div>
+      </div>
+      <pre id="realtimeOut" class="mt-4 bg-gray-900 text-emerald-300 p-3 rounded text-xs max-h-96 overflow-auto">Realtime output...</pre>
+    </section>
+
+    <!-- C2M TESTING - Dynamic BaseUrl -->
+    <section data-panel="c2m" class="tab-panel hidden bg-white rounded-xl shadow p-5">
+      <h2 class="font-bold text-lg flex items-center gap-2"><span class="w-8 h-8 bg-orange-100 text-orange-700 rounded grid place-items-center"><i class="fa-solid fa-plug"></i></span> C2M Testing <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded">Dynamic BaseUrl</span></h2>
+      <p class="text-sm text-gray-500 mt-1">Test all 7 auth types against <b>any host</b> — LAN, localhost, or public tunnel (<code>expose-free.bat</code>). C2M cloud must use public <code>https://xxxx.lhr.life</code>, not <code>192.168...</code>.</p>
+
+      <div class="mt-4 bg-orange-50 border border-orange-200 rounded p-3">
+        <label class="text-xs font-bold">Dynamic Base URL (single for all C2M tests)</label>
+        <div class="flex gap-2 mt-1">
+          <input id="c2mBaseUrl" class="flex-1 border rounded px-3 py-2 text-sm code" placeholder="https://xxxx.lhr.life  or  http://192.168.0.45:3000  or  http://localhost:3000" value="http://192.168.0.45:3000">
+          <button onclick="c2mUseCurrent()" class="bg-gray-800 text-white px-3 rounded text-xs">Use Current</button>
+          <button onclick="c2mSaveBaseUrl()" class="bg-indigo-600 text-white px-3 rounded text-xs">Save</button>
+        </div>
+        <div class="mt-2 flex gap-2 text-xs">
+          <button onclick="c2mSetBase('http://localhost:3000')" class="bg-white border px-2 py-1 rounded">localhost:3000</button>
+          <button onclick="c2mSetBase('http://192.168.0.45:3000')" class="bg-white border px-2 py-1 rounded">LAN 192.168.0.45:3000</button>
+          <button onclick="c2mSetBase('https://12d717493869e5.lhr.life')" class="bg-white border px-2 py-1 rounded">Public demo</button>
+          <button onclick="c2mPasteTunnel()" class="bg-amber-100 px-2 py-1 rounded">Paste tunnel URL</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Stored in localStorage. All C2M buttons below use this URL. Keep tunnel window open for public.</p>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-2">
+        <button onclick="c2mRunAll()" class="col-span-2 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded font-bold text-sm"><i class="fa-solid fa-bolt mr-1"></i> Run All 7 + Realtime for C2M (Dynamic BaseUrl)</button>
+        <button onclick="c2mTest('public')" class="bg-green-600 text-white py-2 rounded text-xs">1. Public /api/public/info</button>
+        <button onclick="c2mTest('basic')" class="bg-amber-600 text-white py-2 rounded text-xs">2. Basic /api/basic/data</button>
+        <button onclick="c2mTest('digest')" class="bg-purple-600 text-white py-2 rounded text-xs">3. Digest /api/digest/data</button>
+        <button onclick="c2mTest('oauth1')" class="bg-amber-700 text-white py-2 rounded text-xs">5. OAuth1 /api/oauth1/data</button>
+        <button onclick="c2mTest('oauth1a')" class="bg-cyan-600 text-white py-2 rounded text-xs">6. OAuth1a /api/oauth1a/data</button>
+        <button onclick="c2mTest('oauth2')" class="bg-indigo-600 text-white py-2 rounded text-xs">7. OAuth2 /api/oauth2/data</button>
+        <button onclick="c2mTest('realtime')" class="bg-emerald-600 text-white py-2 rounded text-xs">Realtime /api/public/data</button>
+        <button onclick="c2mTest('oauth2token')" class="bg-gray-900 text-white py-2 rounded text-xs">OAuth2 Token</button>
+      </div>
+
+      <div class="mt-3 bg-gray-50 p-3 rounded text-xs">
+        <p class="font-bold">C2M Connector Wizard mapping:</p>
+        <p>Host: <code id="c2mHostPreview" class="bg-white px-1 rounded">http://192.168.0.45:3000</code> → Path: <code>/api/public/info</code> etc. Use <code>https://xxxx.lhr.life</code> for cloud.</p>
+        <p class="mt-1">Headers for C2M: Basic <code>Authorization: Basic YWRtaW46YWRtaW4xMjM=</code>, OAuth2 <code>Authorization: Bearer &lt;token&gt;</code></p>
+      </div>
+
+      <pre id="c2mOut" class="mt-4 bg-gray-900 text-orange-300 p-3 rounded text-xs max-h-96 overflow-auto">C2M output — click Run All or individual tests. Dynamic BaseUrl is used for every request.</pre>
+      <div id="c2mSummary" class="mt-2 grid grid-cols-4 gap-2 text-xs"></div>
+    </section>
+  </div>
+
+  <!-- Right: Live preview + config -->
+  <div class="col-span-12 lg:col-span-4 space-y-6">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full realtime-dot"></span> Live Realtime Preview</h3>
+      <p class="text-xs text-gray-500">Auto-updated every 2s via polling (public)</p>
+      <div id="livePreview" class="mt-3 bg-gray-900 text-white rounded p-3 text-xs font-mono max-h-80 overflow-auto">loading...</div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-indigo-50 p-2 rounded"><div class="text-gray-500">BTC</div><div id="previewBTC" class="font-bold">-</div></div>
+        <div class="bg-green-50 p-2 rounded"><div class="text-gray-500">AAPL</div><div id="previewAAPL" class="font-bold">-</div></div>
+        <div class="bg-amber-50 p-2 rounded"><div class="text-gray-500">CPU</div><div id="previewCPU" class="font-bold">-</div></div>
+        <div class="bg-purple-50 p-2 rounded"><div class="text-gray-500">RPS</div><div id="previewRPS" class="font-bold">-</div></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold">Dedicated Server</h3>
+      <p class="text-xs text-gray-500 mt-1">All requests hit same Node/Express server with isolated middleware per auth.</p>
+      <div class="mt-3 text-xs space-y-2 font-mono">
+        <div class="flex justify-between"><span>Base</span><span class="bg-gray-100 px-2 py-1 rounded">http://localhost:3000</span></div>
+        <div class="flex justify-between"><span>WS</span><span class="bg-gray-100 px-2 py-1 rounded">ws://localhost:3000/ws</span></div>
+        <div class="flex justify-between"><span>Socket.IO</span><span class="bg-gray-100 px-2 py-1 rounded">/socket.io/</span></div>
+        <div class="flex justify-between"><span>SSE</span><span class="bg-gray-100 px-2 py-1 rounded">/api/realtime/sse</span></div>
+      </div>
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        <a href="/swagger.json" target="_blank" class="bg-gray-900 text-white text-center py-2 rounded text-xs">Swagger JSON</a>
+        <a href="/postman.json" target="_blank" class="bg-orange-600 text-white text-center py-2 rounded text-xs">Postman JSON</a>
+      </div>
+      <div class="mt-2 text-xs">
+        <p class="font-semibold">Per-auth exports:</p>
+        <div class="grid grid-cols-2 gap-1 mt-1">
+          <a href="/swagger.noauth.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">NoAuth</a>
+          <a href="/swagger.basic.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">Basic</a>
+          <a href="/swagger.digest.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">Digest</a>
+          <a href="/swagger.oauth1.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">OAuth1</a>
+          <a href="/swagger.oauth1a.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">OAuth1a</a>
+          <a href="/swagger.oauth2.json" target="_blank" class="bg-gray-100 py-1 text-center rounded">OAuth2</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold">Quick Test</h3>
+      <div class="mt-2 space-y-2 text-xs">
+        <button onclick="runAllTests()" class="w-full bg-indigo-600 text-white py-2 rounded">Run All Public + Basic Tests</button>
+        <p class="text-gray-400">Outputs to tab pre blocks and console.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="max-w-7xl mx-auto px-4 pb-6 text-center text-xs text-gray-400">
+  Supports: Non-Auth • Basic • Digest • OAuth • OAuth1.0 • OAuth1.0a • OAuth2.0 • WS • SSE • Socket.IO • Swagger • Postman
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Dashboard • Multi-Auth Realtime API</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="css/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" onerror="this.onerror=null"/>
+<script src="js/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="this.onerror=null"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<style>
+  .kpi-card{ border-left:4px solid; }
+  .grid-table th{ position:sticky; top:0; background:#f8fafc; }
+  #map{ height:340px; }
+  .pulse{ animation:pulse 1.2s infinite }
+  @keyframes pulse{0%{opacity:1}50%{opacity:.5}100%{opacity:1}}
+</style>
+</head>
+<body class="bg-[#f1f5f9] min-h-screen">
+<header class="bg-gray-900 text-white sticky top-0 z-50">
+  <div class="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-emerald-600 rounded-lg grid place-items-center"><i class="fa-solid fa-chart-line"></i></div>
+      <div>
+        <h1 class="font-bold leading-none">Live Dashboard</h1>
+        <p class="text-xs text-gray-400">Widgets: Bar • Charts • Graphs • Grid • Maps — Realtime via API <code id="dashBaseUrl" class="bg-white/20 px-1 rounded">http://localhost:3000</code></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="dashStatus" class="text-xs bg-gray-800 px-3 py-1.5 rounded-full flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full pulse"></span><span id="dashStatusTxt">live • 2s tick</span></span>
+      <select id="authSelect" class="text-xs bg-gray-800 rounded px-2 py-1.5">
+        <option value="public">Public (No Auth)</option>
+        <option value="basic">Basic</option>
+        <option value="digest">Digest</option>
+        <option value="oauth">OAuth</option>
+        <option value="oauth1">OAuth 1.0</option>
+        <option value="oauth1a">OAuth 1.0a</option>
+        <option value="bearer">OAuth 2.0 Bearer</option>
+      </select>
+      <input id="bearerInput" placeholder="Bearer token (dbl-click to fetch)" class="hidden text-xs bg-gray-800 rounded px-2 py-1.5 w-48">
+      <button id="pauseBtn" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded"><i class="fa-solid fa-pause"></i> Pause</button>
+      <a href="/" class="text-xs bg-white text-gray-900 px-3 py-1.5 rounded font-semibold">Tabs UI</a>
+      <a href="/runner.html" class="text-xs bg-indigo-600 px-3 py-1.5 rounded">Runner</a>
+    </div>
+  </div>
+</header>
+
+<!-- KPI Banner -->
+<div class="max-w-[1600px] mx-auto px-4 mt-4">
+  <div class="bg-indigo-600 text-white rounded-xl p-3 flex items-center justify-between text-xs">
+    <span><i class="fa-solid fa-link mr-1"></i> Single BaseUrl for all widgets → <code class="bg-white text-indigo-700 px-2 py-1 rounded" id="dashUnified">http://localhost:3000</code> • Realtime payload every 2s from <code>/api/public/data</code> (or authenticated)</span>
+    <span class="hidden lg:block bg-white/20 px-2 py-1 rounded"><span id="lastTick">-</span> • <span id="tickCount">0</span> ticks</span>
+  </div>
+</div>
+
+<main class="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
+  <!-- KPI CARDS -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="kpi-card bg-white rounded-xl p-4 shadow border-l-emerald-500">
+      <div class="text-xs text-gray-500 flex items-center justify-between"><span><i class="fa-brands fa-bitcoin mr-1"></i> BTC</span><span class="text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">crypto</span></div>
+      <div id="kpiBTC" class="text-2xl font-bold mt-1">-</div>
+      <div id="kpiBTCChange" class="text-xs">-</div>
+      <canvas id="sparkBTC" height="28"></canvas>
+    </div>
+    <div class="kpi-card bg-white rounded-xl p-4 shadow border-l-indigo-500">
+      <div class="text-xs text-gray-500">AAPL (Stock)</div>
+      <div id="kpiAAPL" class="text-2xl font-bold mt-1">-</div>
+      <div id="kpiAAPLChange" class="text-xs">-</div>
+      <canvas id="sparkAAPL" height="28"></canvas>
+    </div>
+    <div class="kpi-card bg-white rounded-xl p-4 shadow border-l-amber-500">
+      <div class="text-xs text-gray-500">CPU / Memory</div>
+      <div class="text-2xl font-bold mt-1"><span id="kpiCPU">-</span> / <span id="kpiMem" class="text-gray-400 text-lg">-</span></div>
+      <div id="kpiTemp" class="text-xs">-</div>
+    </div>
+    <div class="kpi-card bg-white rounded-xl p-4 shadow border-l-purple-500">
+      <div class="text-xs text-gray-500">Requests / Latency</div>
+      <div class="text-2xl font-bold mt-1"><span id="kpiRPS">-</span> <span class="text-sm font-normal text-gray-400">rps</span></div>
+      <div id="kpiLatency" class="text-xs">-</div>
+    </div>
+  </div>
+
+  <!-- CHARTS ROW -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl shadow p-4 lg:col-span-1">
+      <h3 class="font-bold text-sm flex items-center justify-between"><span><i class="fa-solid fa-chart-simple mr-1"></i> Stocks — Bar</span><span class="text-xs bg-gray-100 px-2 py-0.5 rounded" id="barTime">-</span></h3>
+      <canvas id="barChart" height="220"></canvas>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 lg:col-span-2">
+      <h3 class="font-bold text-sm flex items-center justify-between"><span><i class="fa-solid fa-chart-line mr-1"></i> Crypto — Line (history 30 ticks)</span><button onclick="clearHistory()" class="text-xs bg-gray-100 px-2 py-1 rounded">Clear</button></h3>
+      <canvas id="lineChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-bold text-sm"><i class="fa-solid fa-temperature-half mr-1"></i> Sensors — Bar/Gauge</h3>
+      <canvas id="sensorChart" height="220"></canvas>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-bold text-sm"><i class="fa-solid fa-chart-pie mr-1"></i> Metrics — Doughnut</h3>
+      <canvas id="doughnutChart" height="220"></canvas>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4">
+      <h3 class="font-bold text-sm"><i class="fa-solid fa-wave-square mr-1"></i> Latency & RPS — Area</h3>
+      <canvas id="areaChart" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- GRID + MAP -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="bg-white rounded-xl shadow p-4 lg:col-span-3 overflow-hidden">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm"><i class="fa-solid fa-table mr-1"></i> Grid — Live Data Table</h3>
+        <div class="flex gap-2">
+          <input id="gridFilter" placeholder="Filter..." class="border rounded px-2 py-1 text-xs">
+          <button onclick="exportCSV()" class="text-xs bg-gray-900 text-white px-3 py-1 rounded">Export CSV</button>
+        </div>
+      </div>
+      <div class="mt-3 max-h-[340px] overflow-auto border rounded">
+        <table class="w-full text-xs">
+          <thead class="grid-table"><tr><th class="p-2 text-left">Time</th><th class="p-2 text-left">AAPL</th><th class="p-2 text-left">GOOGL</th><th class="p-2 text-left">TSLA</th><th class="p-2 text-left">BTC</th><th class="p-2 text-left">ETH</th><th class="p-2 text-left">CPU%</th><th class="p-2 text-left">RPS</th></tr></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 lg:col-span-2">
+      <h3 class="font-bold text-sm"><i class="fa-solid fa-map-location-dot mr-1"></i> Map — Realtime Nodes</h3>
+      <p class="text-xs text-gray-400">Markers update with live price/temp. WS/SSE same BaseUrl.</p>
+      <div id="map" class="mt-2 rounded border"></div>
+      <div class="mt-2 grid grid-cols-3 gap-2 text-xs">
+        <div class="bg-emerald-50 p-2 rounded"><div class="text-gray-500">NYSE (AAPL)</div><div id="mapAAPL" class="font-bold">-</div></div>
+        <div class="bg-indigo-50 p-2 rounded"><div class="text-gray-500">NASDAQ (GOOGL)</div><div id="mapGOOGL" class="font-bold">-</div></div>
+        <div class="bg-amber-50 p-2 rounded"><div class="text-gray-500">Sensors (Delhi)</div><div id="mapTemp" class="font-bold">-</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event log -->
+  <div class="bg-white rounded-xl shadow p-4">
+    <h3 class="font-bold text-sm flex items-center justify-between"><span><i class="fa-solid fa-terminal mr-1"></i> Realtime Log (SSE/WS)</span><span class="text-xs text-gray-400" id="logInfo">polling /api/public/data every 2s</span></h3>
+    <pre id="dashLog" class="mt-2 bg-gray-900 text-green-300 p-3 rounded text-xs max-h-40 overflow-auto">waiting for ticks...</pre>
+  </div>
+</main>
+
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "info": {
+    "name": "7 - Generic OAuth",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "7 - Generic OAuth",
+      "item": [
+        {
+          "name": "GET generic info",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/oauth/info"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}

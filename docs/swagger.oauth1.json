@@ -1,0 +1,131 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multi-Auth API - oauth1",
+    "version": "1.0.0",
+    "description": "Demonstrates Non-Auth, Basic, Digest, OAuth 1.0, OAuth 1.0a, OAuth 2.0 with realtime (WS, SSE, Socket.IO) - Single BaseUrl for all auth types"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Single BaseUrl for all auth types - Dedicated Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "OAuth 1.0",
+      "description": "OAuth 1.0 2-legged HMAC-SHA1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "digestAuth": {
+        "type": "http",
+        "scheme": "digest"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "oauth1": {
+        "type": "oauth2",
+        "flows": {}
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:3000/api/oauth2/authorize",
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read"
+            }
+          },
+          "password": {
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RealtimePayload": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "stocks": {
+            "type": "array"
+          },
+          "crypto": {
+            "type": "array"
+          },
+          "sensors": {
+            "type": "object"
+          },
+          "metrics": {
+            "type": "object"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/oauth1/data": {
+      "get": {
+        "tags": [
+          "OAuth 1.0"
+        ],
+        "summary": "OAuth 1.0 data",
+        "security": [
+          {
+            "oauth1": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "OAuth header with HMAC-SHA1 signature",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

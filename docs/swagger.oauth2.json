@@ -1,0 +1,246 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multi-Auth API - oauth2",
+    "version": "1.0.0",
+    "description": "Demonstrates Non-Auth, Basic, Digest, OAuth 1.0, OAuth 1.0a, OAuth 2.0 with realtime (WS, SSE, Socket.IO) - Single BaseUrl for all auth types"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Single BaseUrl for all auth types - Dedicated Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "OAuth 2.0",
+      "description": "OAuth 2.0 Bearer (auth code, client_credentials, password, refresh)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "digestAuth": {
+        "type": "http",
+        "scheme": "digest"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "oauth1": {
+        "type": "oauth2",
+        "flows": {}
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://localhost:3000/api/oauth2/authorize",
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read"
+            }
+          },
+          "password": {
+            "tokenUrl": "http://localhost:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RealtimePayload": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "stocks": {
+            "type": "array"
+          },
+          "crypto": {
+            "type": "array"
+          },
+          "sensors": {
+            "type": "object"
+          },
+          "metrics": {
+            "type": "object"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/oauth2/authorize": {
+      "get": {
+        "tags": [
+          "OAuth 2.0"
+        ],
+        "summary": "Authorization endpoint",
+        "parameters": [
+          {
+            "name": "response_type",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "code"
+              ]
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "code"
+          }
+        }
+      }
+    },
+    "/api/oauth2/token": {
+      "post": {
+        "tags": [
+          "OAuth 2.0"
+        ],
+        "summary": "Token endpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": {
+                    "type": "string",
+                    "enum": [
+                      "authorization_code",
+                      "client_credentials",
+                      "password",
+                      "refresh_token"
+                    ]
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "client_id": {
+                    "type": "string"
+                  },
+                  "client_secret": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "refresh_token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "token"
+          }
+        }
+      }
+    },
+    "/api/oauth2/data": {
+      "get": {
+        "tags": [
+          "OAuth 2.0"
+        ],
+        "summary": "OAuth2 protected data",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/oauth2/introspect": {
+      "post": {
+        "tags": [
+          "OAuth 2.0"
+        ],
+        "summary": "Introspect token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

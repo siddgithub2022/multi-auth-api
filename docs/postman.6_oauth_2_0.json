@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "6 - OAuth 2.0",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "6 - OAuth 2.0",
+      "item": [
+        {
+          "name": "GET credentials",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/oauth2/credentials"
+          }
+        },
+        {
+          "name": "GET authorize code",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/oauth2/authorize?response_type=code&client_id=client_app_123&redirect_uri=http://localhost:3000/callback&user=john",
+              "query": [
+                {
+                  "key": "response_type",
+                  "value": "code"
+                },
+                {
+                  "key": "client_id",
+                  "value": "client_app_123"
+                },
+                {
+                  "key": "redirect_uri",
+                  "value": "http://localhost:3000/callback"
+                },
+                {
+                  "key": "user",
+                  "value": "john"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST token - auth_code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"grant_type\":\"authorization_code\",\"code\":\"{{oauth2_code}}\",\"client_id\":\"client_app_123\",\"client_secret\":\"client_secret_abc_123\",\"redirect_uri\":\"http://localhost:3000/callback\"}"
+            },
+            "url": "{{baseUrl}}/api/oauth2/token"
+          }
+        },
+        {
+          "name": "POST token - client_credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"grant_type\":\"client_credentials\",\"client_id\":\"client_app_123\",\"client_secret\":\"client_secret_abc_123\"}"
+            },
+            "url": "{{baseUrl}}/api/oauth2/token"
+          }
+        },
+        {
+          "name": "POST token - password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"grant_type\":\"password\",\"username\":\"john\",\"password\":\"john123\",\"client_id\":\"client_app_123\",\"client_secret\":\"client_secret_abc_123\"}"
+            },
+            "url": "{{baseUrl}}/api/oauth2/token"
+          }
+        },
+        {
+          "name": "POST token - refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"grant_type\":\"refresh_token\",\"refresh_token\":\"{{oauth2_refresh_token}}\",\"client_id\":\"client_app_123\",\"client_secret\":\"client_secret_abc_123\"}"
+            },
+            "url": "{{baseUrl}}/api/oauth2/token"
+          }
+        },
+        {
+          "name": "POST introspect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\":\"{{oauth2_access_token}}\"}"
+            },
+            "url": "{{baseUrl}}/api/oauth2/introspect"
+          }
+        },
+        {
+          "name": "GET oauth2 data",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{oauth2_access_token}}"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/oauth2/data"
+          }
+        },
+        {
+          "name": "GET SSE oauth2",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{oauth2_access_token}}"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/realtime/sse/oauth2"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}

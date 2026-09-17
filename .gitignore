@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.log
+public-url.txt
+tunnel.log
+.DS_Store
+.vscode/

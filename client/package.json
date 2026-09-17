@@ -1,0 +1,14 @@
+{
+  "name": "multi-auth-client",
+  "version": "1.0.0",
+  "description": "Standalone client UI for Multi-Auth Realtime API - runs on http://localhost:8080 and proxies to server http://localhost:3000",
+  "scripts": {
+    "start": "npx http-server . -p 8080 --cors -c-1 --g -o",
+    "dev": "npx http-server . -p 8080 --cors -c-1",
+    "serve": "npx serve . -l 8080"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1",
+    "serve": "^14.2.0"
+  }
+}

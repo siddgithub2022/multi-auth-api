@@ -1,0 +1,141 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multi-Auth API - basic",
+    "version": "1.0.0",
+    "description": "Demonstrates Non-Auth, Basic, Digest, OAuth 1.0, OAuth 1.0a, OAuth 2.0 with realtime (WS, SSE, Socket.IO) - Single BaseUrl for all auth types"
+  },
+  "servers": [
+    {
+      "url": "http://192.168.0.45:3000",
+      "description": "Single BaseUrl for all auth types - Dedicated Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Basic Auth",
+      "description": "HTTP Basic"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "digestAuth": {
+        "type": "http",
+        "scheme": "digest"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "oauth1": {
+        "type": "oauth2",
+        "flows": {}
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://192.168.0.45:3000/api/oauth2/authorize",
+            "tokenUrl": "http://192.168.0.45:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          },
+          "clientCredentials": {
+            "tokenUrl": "http://192.168.0.45:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read"
+            }
+          },
+          "password": {
+            "tokenUrl": "http://192.168.0.45:3000/api/oauth2/token",
+            "scopes": {
+              "read": "read",
+              "write": "write"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RealtimePayload": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "stocks": {
+            "type": "array"
+          },
+          "crypto": {
+            "type": "array"
+          },
+          "sensors": {
+            "type": "object"
+          },
+          "metrics": {
+            "type": "object"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/basic/data": {
+      "get": {
+        "tags": [
+          "Basic Auth"
+        ],
+        "summary": "Basic Auth data",
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/basic/profile": {
+      "get": {
+        "tags": [
+          "Basic Auth"
+        ],
+        "summary": "Basic profile",
+        "security": [
+          {
+            "basicAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  }
+}

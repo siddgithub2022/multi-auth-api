@@ -1,0 +1,67 @@
+{
+  "info": {
+    "name": "4 - OAuth 1.0 (2-legged HMAC-SHA1)",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "4 - OAuth 1.0 (2-legged HMAC-SHA1)",
+      "item": [
+        {
+          "name": "GET credentials",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/oauth1/credentials"
+          }
+        },
+        {
+          "name": "GET oauth1 data (signed)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "oauth1",
+              "oauth1": [
+                {
+                  "key": "consumerKey",
+                  "value": "oauth1_consumer_key"
+                },
+                {
+                  "key": "consumerSecret",
+                  "value": "oauth1_consumer_secret_123"
+                },
+                {
+                  "key": "token",
+                  "value": "oauth1_token_abc"
+                },
+                {
+                  "key": "tokenSecret",
+                  "value": "oauth1_token_secret_xyz"
+                },
+                {
+                  "key": "signatureMethod",
+                  "value": "HMAC-SHA1"
+                },
+                {
+                  "key": "version",
+                  "value": "1.0"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/oauth1/data"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  server:
+    build: .
+    ports:
+      - "3000:3000"
+      - "8080:8080"
+    environment:
+      - PORT=3000
+      - BASE_URL=http://localhost:3000
+      - HOST=0.0.0.0
+    volumes:
+      - ./server:/app/server
+      - ./client:/app/client
+    command: node server/server.js
+  client:
+    image: node:20-alpine
+    working_dir: /app/client
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./client:/app/client
+    command: npx http-server . -p 8080 --cors -c-1
+    depends_on:
+      - server

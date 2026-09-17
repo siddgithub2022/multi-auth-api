@@ -1,0 +1,59 @@
+{
+  "info": {
+    "name": "3 - Digest Auth",
+    "description": "Postman collection for Non-Auth, Basic, Digest, OAuth1.0, OAuth1.0a, OAuth2.0 + Realtime",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "3 - Digest Auth",
+      "item": [
+        {
+          "name": "GET credentials",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/digest/credentials"
+          }
+        },
+        {
+          "name": "GET digest data",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "digest",
+              "digest": [
+                {
+                  "key": "username",
+                  "value": "admin"
+                },
+                {
+                  "key": "password",
+                  "value": "admin123"
+                },
+                {
+                  "key": "algorithm",
+                  "value": "MD5"
+                },
+                {
+                  "key": "qop",
+                  "value": "auth"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/digest/data"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://192.168.0.45:3000"
+    },
+    {
+      "key": "wsBaseUrl",
+      "value": "ws://192.168.0.45:3000"
+    }
+  ]
+}
