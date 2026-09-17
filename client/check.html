@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Check - Multi-Auth API</title></head><body style="font-family:system-ui;padding:20px">
+<h1>✓ Check File - Multi-Auth API</h1>
+<p>If you see this, <b>client is reachable</b> at <code id="url"></code></p>
+<p>Server health: <code id="health"></code></p>
+<p>Time: <code id="time"></code></p>
+<script>
+document.getElementById('url').textContent = location.origin;
+document.getElementById('time').textContent = new Date().toISOString();
+fetch('/health').then(r=>r.json()).then(j=>{ document.getElementById('health').textContent = JSON.stringify(j); document.getElementById('health').style.color='green'; }).catch(e=>{ document.getElementById('health').textContent='offline: '+e.message; document.getElementById('health').style.color='red'; });
+fetch('/api/public/info').then(r=>r.json()).then(j=>{ document.body.insertAdjacentHTML('beforeend','<pre style="background:#111;color:#0f0;padding:12px;border-radius:8px;overflow:auto">'+JSON.stringify(j,null,2)+'</pre>'); });
+</script>
+</body></html>
