@@ -69,27 +69,53 @@ app.get('/api/data/digest-protected', digestAuthMiddleware, (req, res) => res.js
 app.get('/api/data/oauth1-protected', oauth1Middleware, (req, res) => res.json({ auth: 'oauth1', user: req.user, realtime: generateRealtimePayload() }));
 app.get('/api/data/oauth2-protected', oauth2Middleware, (req, res) => res.json({ auth: 'oauth2', user: req.user, realtime: generateRealtimePayload() }));
 
-// Swagger JSON
-const swaggerDir = path.join(__dirname, '../swagger');
-const docsDir = path.join(__dirname, '../docs');
-if (!fs.existsSync(swaggerDir)) fs.mkdirSync(swaggerDir, { recursive: true });
-if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
-
-const swaggerSpec = generateAll(swaggerDir);
+// Swagger JSON - handle Vercel read-only file system (/var/task is read-only, use /tmp)
+const swaggerDir = process.env.VERCEL ? path.join('/tmp', 'swagger') : path.join(__dirname, '../swagger');
+const docsDir = process.env.VERCEL ? path.join('/tmp', 'docs') : path.join(__dirname, '../docs');
+try { if (!fs.existsSync(swaggerDir)) fs.mkdirSync(swaggerDir, { recursive: true }); } catch {}
+try { if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true }); } catch {}
+let swaggerSpec;
+try {
+  swaggerSpec = generateAll(swaggerDir);
+} catch(e) {
+  // Fallback for Vercel if write fails - generate in memory
+  console.error('Swagger generate failed, using in-memory', e.message);
+  const { baseSpec, addPaths } = require('./utils/swaggerGenerator');
+  swaggerSpec = addPaths(baseSpec());
+}
 app.get('/swagger.json', (req, res) => res.json(swaggerSpec));
 app.get('/api/swagger.json', (req, res) => res.json(swaggerSpec));
-swaggerSpec.tags.forEach(t => {
-  const key = t.name.toLowerCase().includes('no auth') ? 'noauth' : t.name.toLowerCase().includes('basic') ? 'basic' : t.name.toLowerCase().includes('digest') ? 'digest' : t.name.includes('1.0a') ? 'oauth1a' : t.name.includes('1.0') ? 'oauth1' : t.name.includes('2.0') ? 'oauth2' : t.name.toLowerCase().includes('realtime') ? 'realtime' : null;
-  if (key) {
+// Per-key swagger - serve from memory on Vercel, file on local
+const swaggerPerKey = {};
+try {
+  swaggerSpec.tags.forEach(t => {
+    const key = t.name.toLowerCase().includes('no auth') ? 'noauth' : t.name.toLowerCase().includes('basic') ? 'basic' : t.name.toLowerCase().includes('digest') ? 'digest' : t.name.includes('1.0a') ? 'oauth1a' : t.name.includes('1.0') ? 'oauth1' : t.name.includes('2.0') ? 'oauth2' : t.name.toLowerCase().includes('realtime') ? 'realtime' : null;
+    if (!key) return;
+    // Try file first (local), fallback to in-memory
     try {
       const file = path.join(swaggerDir, `swagger.${key}.json`);
       if (fs.existsSync(file)) {
+        swaggerPerKey[key] = JSON.parse(fs.readFileSync(file, 'utf8'));
         app.get(`/swagger.${key}.json`, (req, res) => res.sendFile(file));
         app.get(`/api/swagger/${key}`, (req, res) => res.sendFile(file));
+        return;
       }
     } catch {}
-  }
-});
+    // In-memory fallback for Vercel
+    const { baseSpec, addPaths } = require('./utils/swaggerGenerator');
+    const full = addPaths(baseSpec());
+    const clone = JSON.parse(JSON.stringify(full));
+    clone.info.title = `Multi-Auth API - ${key}`;
+    const tags = { noauth:['Public (No Auth)'], basic:['Basic Auth'], digest:['Digest Auth'], oauth1:['OAuth 1.0'], oauth1a:['OAuth 1.0a'], oauth2:['OAuth 2.0'], realtime:['Realtime'] }[key];
+    if(tags){
+      clone.paths = Object.fromEntries(Object.entries(full.paths).filter(([_,v])=>{ const m=Object.values(v)[0]; return m.tags && m.tags.some(t=> tags.includes(t)); }));
+      clone.tags = full.tags.filter(t=> tags.includes(t.name));
+    }
+    swaggerPerKey[key]=clone;
+    app.get(`/swagger.${key}.json`, (req, res) => res.json(clone));
+    app.get(`/api/swagger/${key}`, (req, res) => res.json(clone));
+  });
+} catch(e){ console.error('Per-key swagger failed', e.message); }
 
 // Swagger UI
 app.get('/docs', (req, res) => {
@@ -119,12 +145,34 @@ app.get('/runner.html', (req,res)=> res.sendFile(path.join(__dirname,'../client/
 app.get('/dashboard', (req,res)=> res.sendFile(path.join(__dirname,'../client/dashboard.html')));
 app.get('/dashboard.html', (req,res)=> res.sendFile(path.join(__dirname,'../client/dashboard.html')));
 
-// Postman collection generation
+// Postman collection generation - handle Vercel read-only
 const postmanPath = path.join(docsDir, 'postman_collection.json');
-generatePostman(postmanPath);
-app.get('/postman.json', (req, res) => res.sendFile(postmanPath));
-app.get('/api/postman.json', (req, res) => res.sendFile(postmanPath));
-app.get('/postman_collection.json', (req, res) => res.sendFile(postmanPath));
+let postmanColl=null;
+try {
+  postmanColl = generatePostman(postmanPath);
+} catch(e) {
+  console.error('Postman generate failed, using in-memory', e.message);
+  try {
+    const { buildCollection } = require('./utils/postmanGenerator');
+    postmanColl = buildCollection();
+  } catch {}
+}
+if(postmanColl){
+  app.get('/postman.json', (req, res) => {
+    try { if(postmanPath && fs.existsSync(postmanPath)) return res.sendFile(postmanPath); } catch {}
+    res.json(postmanColl);
+  });
+  app.get('/api/postman.json', (req, res) => {
+    try { if(postmanPath && fs.existsSync(postmanPath)) return res.sendFile(postmanPath); } catch {}
+    res.json(postmanColl);
+  });
+  app.get('/postman_collection.json', (req, res) => {
+    try { if(postmanPath && fs.existsSync(postmanPath)) return res.sendFile(postmanPath); } catch {}
+    res.json(postmanColl);
+  });
+} else {
+  app.get('/postman.json', (req, res) => res.status(500).json({ error: 'Postman not generated' }));
+}
 
 // Callback dummy for OAuth
 app.get('/callback', (req, res) => {
