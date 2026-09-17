@@ -3,20 +3,16 @@ services:
     name: multi-auth-api
     env: node
     plan: free
-    buildCommand: npm install && cd server && npm install && cd ../client && npm install
+    buildCommand: npm install && cd server && npm install
     startCommand: node server/server.js
     envVars:
-      - key: PORT
-        value: 3000
       - key: HOST
         value: 0.0.0.0
       - key: BASE_URL
-        fromDatabase:
-          property: host
-        # Will be https://your-app.onrender.com - set after deploy
+        value: https://multi-auth-api.onrender.com
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
     healthCheckPath: /health
-    autoDeploy: false
+    autoDeploy: true
